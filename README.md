@@ -153,8 +153,8 @@ Unlike most “futuristic” open-source apps that look like abandoned router fi
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/airwrite-studio.git
-cd airwrite-studio
+git clone https://github.com/yourusername/AirWriteStudio.git
+cd AirWriteStudio
 ```
 
 ---
