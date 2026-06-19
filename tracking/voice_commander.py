@@ -16,6 +16,7 @@ import sys
 from typing import ClassVar, Dict, Optional, Tuple
 
 from PyQt6.QtCore import QThread, pyqtSignal
+from utils import get_resource_path
 
 
 # ─── Optional Dependency Guard ──────────────────────────────────────────────
@@ -67,11 +68,10 @@ class VoiceCommander(QThread):
     listening_stopped  = pyqtSignal()
 
     # ── Model path (relative to project root / assets) ───────────────────
-    _MODEL_DIR: ClassVar[str] = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
+    _MODEL_DIR: ClassVar[str] = get_resource_path(os.path.join(
         'assets',
         'vosk-model',
-    )
+    ))
 
     # ── Command vocabulary ───────────────────────────────────────────────
     _COMMAND_TABLE: ClassVar[list[Tuple[Tuple[str, ...], str, dict]]] = [

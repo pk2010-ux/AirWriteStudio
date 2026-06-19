@@ -6,6 +6,8 @@ and image format conversion used across modules.
 """
 
 import math
+import os
+import sys
 import numpy as np
 import cv2
 from PyQt6.QtGui import QImage
@@ -68,15 +70,31 @@ def get_palm_size(landmarks):
 def midpoint(p1, p2):
     """
     Midpoint between two points.
-    
+
     Args:
         p1: Tuple (x, y)
         p2: Tuple (x, y)
-    
+
     Returns:
         Tuple (x, y): Midpoint
     """
     return ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+
+
+def get_resource_path(relative_path: str) -> str:
+    """
+    Return an absolute path to a bundled resource.
+
+    Works in normal execution and when packaged by PyInstaller.
+
+    Args:
+        relative_path: Path relative to the project root or bundled runtime.
+
+    Returns:
+        str: Absolute filesystem path to the resource.
+    """
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath(os.path.dirname(__file__)))
+    return os.path.join(base_path, relative_path)
 
 
 def landmark_to_pixel(landmark, canvas_width, canvas_height):

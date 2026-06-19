@@ -25,11 +25,11 @@ from config import (
     CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT,
     MP_MAX_NUM_HANDS, MP_MIN_DETECTION_CONFIDENCE, MP_MIN_TRACKING_CONFIDENCE,
 )
-from utils import qimage_from_cv
+from utils import qimage_from_cv, get_resource_path
 
 
 # Path to the hand landmarker model file
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "hand_landmarker.task")
+MODEL_PATH = get_resource_path(os.path.join("assets", "hand_landmarker.task"))
 
 
 class HandTracker(QThread):
