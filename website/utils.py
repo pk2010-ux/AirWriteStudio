@@ -10,8 +10,13 @@ import os
 import sys
 import numpy as np
 import cv2
-from PyQt6.QtGui import QImage
-from PyQt6.QtCore import QPointF
+
+try:
+    from PyQt6.QtGui import QImage
+    from PyQt6.QtCore import QPointF
+    HAS_PYQT = True
+except ImportError:
+    HAS_PYQT = False
 
 
 def distance(p1, p2):
@@ -124,6 +129,8 @@ def landmark_to_qpoint(landmark, canvas_width, canvas_height):
     Returns:
         QPointF: Point in canvas coordinates
     """
+    if not HAS_PYQT:
+        return None
     return QPointF(landmark.x * canvas_width, landmark.y * canvas_height)
 
 
@@ -140,6 +147,8 @@ def qimage_from_cv(frame):
     Returns:
         QImage: Converted image in RGB888 format
     """
+    if not HAS_PYQT:
+        return None
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, ch = rgb_frame.shape
     bytes_per_line = ch * w
