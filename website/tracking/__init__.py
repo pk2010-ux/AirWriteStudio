@@ -1,5 +1,3 @@
-# AirWrite Studio - Tracking Module
-from .hand_tracker import HandTracker
+# AirWrite Studio - Tracking Module (Web version)
+# Only import modules that don't require PyQt6
 from .gesture_detector import GestureDetector
-from .smoother import PointSmoother
-from .voice_commander import VoiceCommander
