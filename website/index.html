@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AirWrite Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* ========== GLOBAL STYLES ========== */
         * {
@@ -438,7 +439,7 @@
     <div class="container">
         <!-- FACE DETECTION INDICATOR -->
         <div style="position: fixed; top: 10px; right: 10px; background-color: #232340; border: 1px solid #3a3a5c; border-radius: 8px; padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; z-index: 100;">
-            <span style="font-size: 16px;">😶</span>
+            <span style="font-size: 16px;"><i class="fa-solid fa-face-meh"></i></span>
             <span style="color: #9898b0;">Face Not Visible</span>
         </div>
 
@@ -446,7 +447,7 @@
         <div class="sidebar">
             <div class="sidebar-content">
                 <!-- App Title -->
-                <div class="app-title">✨ AirWrite Studio</div>
+                <div class="app-title"><i class="fa-solid fa-wand-magic-sparkles"></i> AirWrite Studio</div>
                 <div class="app-subtitle">Hands-free digital canvas</div>
 
                 <!-- STATUS Section -->
@@ -454,12 +455,12 @@
                 <div class="gesture-status-card">
                     <div class="gesture-row">
                         <div class="gesture-dot"></div>
-                        <span class="gesture-icon">✋</span>
+                        <span class="gesture-icon"><i class="fa-solid fa-hand-paper"></i></span>
                         <span class="gesture-label">Neutral</span>
                     </div>
                     <div class="gesture-description">Open palm — no action</div>
                     <div class="gesture-info-row">
-                        <span class="hand-status">� Face not recognised</span>
+                        <span class="hand-status"><i class="fa-solid fa-face-meh"></i> Face not recognised</span>
                         <span class="fps-label">FPS: --</span>
                     </div>
                 </div>
@@ -469,11 +470,11 @@
                 <div class="camera-widget" id="camera-widget">
                     <video id="camera-feed" style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
                     <div class="camera-placeholder" id="camera-placeholder">
-                        <div class="camera-icon">📷</div>
+                        <div class="camera-icon"><i class="fa-solid fa-camera"></i></div>
                         <div class="camera-text">Camera Off</div>
                     </div>
                 </div>
-                <button class="primary-button" id="camera-toggle-btn">▶  Start Camera</button>
+                <button class="primary-button" id="camera-toggle-btn"><i class="fa-solid fa-video"></i>  Start Camera</button>
 
                 <div class="separator"></div>
 
@@ -514,18 +515,18 @@
                 <!-- ACTIONS Section -->
                 <div class="section-title">ACTIONS</div>
                 <div class="button-row">
-                    <button>↩ Undo</button>
-                    <button>↪ Redo</button>
+                    <button><i class="fa-solid fa-undo"></i> Undo</button>
+                    <button><i class="fa-solid fa-redo"></i> Redo</button>
                 </div>
-                <button class="danger-button" style="width: 100%;">🗑️  Clear Canvas</button>
+                <button class="danger-button" style="width: 100%;"><i class="fa-solid fa-trash"></i>  Clear Canvas</button>
 
                 <div class="separator"></div>
 
                 <!-- EXPORT Section -->
                 <div class="section-title">EXPORT</div>
                 <div class="button-row">
-                    <button>📷 Save PNG</button>
-                    <button>📄 PDF</button>
+                    <button><i class="fa-solid fa-camera"></i> Save PNG</button>
+                    <button><i class="fa-solid fa-file-pdf"></i> PDF</button>
                 </div>
 
                 <div class="separator"></div>
@@ -533,15 +534,15 @@
                 <!-- BACKGROUND Section -->
                 <div class="section-title">BACKGROUND</div>
                 <div class="button-row">
-                    <button>🖼️ Load Image</button>
-                    <button>✕ Clear</button>
+                    <button><i class="fa-solid fa-image"></i> Load Image</button>
+                    <button><i class="fa-solid fa-times"></i> Clear</button>
                 </div>
 
                 <div class="separator"></div>
 
                 <!-- FRAME CAPTURE Section -->
                 <div class="section-title">FRAME CAPTURE</div>
-                <button id="frame-capture-toggle" style="width: 100%; margin-bottom: 6px;">🎥 Enable Frame Capture</button>
+                <button id="frame-capture-toggle" style="width: 100%; margin-bottom: 6px;"><i class="fa-solid fa-video"></i> Enable Frame Capture</button>
                 <div class="slider-container">
                     <label for="capture-interval">Interval (ms)</label>
                     <input type="range" id="capture-interval" min="500" max="5000" step="500" value="1500">
@@ -558,7 +559,7 @@
         <!-- CANVAS AREA -->
         <div class="canvas-area">
             <div class="canvas-placeholder">
-                <h2>🎨 Canvas</h2>
+                <h2><i class="fa-solid fa-palette"></i> Canvas</h2>
                 <p>Start drawing with hand gestures</p>
             </div>
         </div>
@@ -620,7 +621,7 @@
 
         function startFrameCapture() {
             frameCapturing = true;
-            frameCaptureToggle.textContent = '🎥 Disable Frame Capture';
+            frameCaptureToggle.innerHTML = '<i class="fa-solid fa-video-slash"></i> Disable Frame Capture';
             frameCaptureToggle.classList.add('danger-button');
             captureStatus.textContent = `Capture: Enabled (${captureInterval}ms)`;
             captureStatus.style.color = '#4ECDC4';
@@ -632,7 +633,7 @@
 
         function stopFrameCapture() {
             frameCapturing = false;
-            frameCaptureToggle.textContent = '🎥 Enable Frame Capture';
+            frameCaptureToggle.innerHTML = '<i class="fa-solid fa-video"></i> Enable Frame Capture';
             frameCaptureToggle.classList.remove('danger-button');
             captureStatus.textContent = 'Capture: Disabled';
             captureStatus.style.color = '#9898b0';
@@ -714,12 +715,12 @@
             const isRunning = this.textContent.includes('Stop');
             if (isRunning) {
                 stopCamera();
-                this.textContent = '▶  Start Camera';
+                this.innerHTML = '<i class="fa-solid fa-video"></i> Start Camera';
                 this.classList.remove('danger-button');
                 this.classList.add('primary-button');
             } else {
                 startCamera();
-                this.textContent = '⏹  Stop Camera';
+                this.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera';
                 this.classList.remove('primary-button');
                 this.classList.add('danger-button');
             }
@@ -754,7 +755,7 @@
             const desc = document.querySelector('.gesture-description');
 
             dot.style.backgroundColor = color;
-            iconEl.textContent = icon;
+            iconEl.innerHTML = icon;
             label.textContent = mode;
             label.style.color = color;
             desc.textContent = description;
@@ -764,10 +765,10 @@
         function updateFaceStatus(recognized) {
             const faceStatus = document.querySelector('.hand-status');
             if (recognized) {
-                faceStatus.textContent = '😊 Face recognised';
+                faceStatus.innerHTML = '<i class="fa-solid fa-face-smile"></i> Face recognised';
                 faceStatus.style.color = '#4ECDC4';
             } else {
-                faceStatus.textContent = '😶 Face not recognised';
+                faceStatus.innerHTML = '<i class="fa-solid fa-face-meh"></i> Face not recognised';
                 faceStatus.style.color = '#9898b0';
             }
         }
@@ -779,13 +780,13 @@
 
         // Optional: Demo animation on load
         setTimeout(() => {
-            updateGestureStatus('Drawing', '✏️', '#4ECDC4', 'Thumb + Index pinch — draw');
+            updateGestureStatus('Drawing', '<i class="fa-solid fa-pencil"></i>', '#4ECDC4', 'Thumb + Index pinch — draw');
             updateFaceStatus(true);
             updateFPS(30);
         }, 2000);
 
         setTimeout(() => {
-            updateGestureStatus('Neutral', '✋', '#6C757D', 'Open palm — no action');
+            updateGestureStatus('Neutral', '<i class="fa-solid fa-hand-paper"></i>', '#6C757D', 'Open palm — no action');
             updateFaceStatus(false);
             updateFPS('--');
         }, 5000);
