@@ -433,9 +433,56 @@
                 flex: 1;
             }
         }
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #1a1a2e;
+            border: 1px solid #3a3a5c;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-content h3 {
+            color: #e8e8f0;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+        .modal-content p {
+            color: #9898b0;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .modal-content a {
+            color: #4361ee;
+            text-decoration: none;
+        }
+        .modal-content a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+    <div class="modal-overlay" id="startup-modal">
+        <div class="modal-content">
+            <h3><i class="fa-solid fa-circle-info"></i> Web Demo Version</h3>
+            <p>Some advanced features might be non-functional because they rely on a Python backend and this is just a demo. For the full experience, please use the <a href="https://github.com" target="_blank">source code</a>.</p>
+            <button class="primary-button" id="close-modal-btn" style="width: 100%; padding: 12px;">Understand & Continue</button>
+        </div>
+    </div>
+
     <div class="container">
         <!-- FACE DETECTION INDICATOR -->
         <div style="position: fixed; top: 10px; right: 10px; background-color: #232340; border: 1px solid #3a3a5c; border-radius: 8px; padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; z-index: 100;">
@@ -558,7 +605,8 @@
 
         <!-- CANVAS AREA -->
         <div class="canvas-area">
-            <div class="canvas-placeholder">
+            <canvas id="drawing-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+            <div class="canvas-placeholder" id="canvas-placeholder">
                 <h2><i class="fa-solid fa-palette"></i> Canvas</h2>
                 <p>Start drawing with hand gestures</p>
             </div>
@@ -568,228 +616,9 @@
     <!-- Hidden Canvas for Frame Capture -->
     <canvas id="capture-canvas" style="display: none;"></canvas>
 
-    <script>
-        // Camera functionality
-        let cameraStream = null;
-        const videoElement = document.getElementById('camera-feed');
-        const cameraPlaceholder = document.getElementById('camera-placeholder');
-        const cameraToggleBtn = document.getElementById('camera-toggle-btn');
-
-        // Frame capture functionality
-        let frameCapturing = false;
-        let captureInterval = 1500;
-        let captureIntervalId = null;
-        const captureCanvas = document.getElementById('capture-canvas');
-        const frameCaptureToggle = document.getElementById('frame-capture-toggle');
-        const captureIntervalSlider = document.getElementById('capture-interval');
-        const phpEndpointInput = document.getElementById('php-endpoint');
-        const captureStatus = document.getElementById('capture-status');
-        const intervalDisplay = document.getElementById('interval-display');
-
-        async function startCamera() {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 250 }, height: { ideal: 188 } },
-                    audio: false
-                });
-                videoElement.srcObject = cameraStream;
-                videoElement.play();
-                videoElement.style.display = 'block';
-                cameraPlaceholder.style.display = 'none';
-                
-                // Set canvas size to match video
-                captureCanvas.width = videoElement.videoWidth || 250;
-                captureCanvas.height = videoElement.videoHeight || 188;
-            } catch (err) {
-                console.error('Error accessing camera:', err);
-                alert('Unable to access camera. Please check permissions.');
-            }
-        }
-
-        function stopCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                videoElement.style.display = 'none';
-                cameraPlaceholder.style.display = 'flex';
-                videoElement.srcObject = null;
-            }
-            // Stop frame capture if running
-            if (frameCapturing) {
-                stopFrameCapture();
-            }
-        }
-
-        function startFrameCapture() {
-            frameCapturing = true;
-            frameCaptureToggle.innerHTML = '<i class="fa-solid fa-video-slash"></i> Disable Frame Capture';
-            frameCaptureToggle.classList.add('danger-button');
-            captureStatus.textContent = `Capture: Enabled (${captureInterval}ms)`;
-            captureStatus.style.color = '#4ECDC4';
-
-            captureIntervalId = setInterval(() => {
-                captureAndSendFrame();
-            }, captureInterval);
-        }
-
-        function stopFrameCapture() {
-            frameCapturing = false;
-            frameCaptureToggle.innerHTML = '<i class="fa-solid fa-video"></i> Enable Frame Capture';
-            frameCaptureToggle.classList.remove('danger-button');
-            captureStatus.textContent = 'Capture: Disabled';
-            captureStatus.style.color = '#9898b0';
-
-            if (captureIntervalId) {
-                clearInterval(captureIntervalId);
-                captureIntervalId = null;
-            }
-        }
-
-        function captureAndSendFrame() {
-            if (!videoElement || !videoElement.srcObject) {
-                console.warn('Camera not available for frame capture');
-                return;
-            }
-
-            try {
-                const context = captureCanvas.getContext('2d');
-                context.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
-                
-                // Convert canvas to base64 PNG
-                const frameData = captureCanvas.toDataURL('image/png');
-                
-                // Send to PHP endpoint
-                sendFrameToServer(frameData);
-            } catch (err) {
-                console.error('Error capturing frame:', err);
-            }
-        }
-
-        function sendFrameToServer(frameData) {
-            const endpoint = phpEndpointInput.value || 'http://localhost/post.php';
-            
-            fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    frame: frameData,
-                    timestamp: new Date().toISOString()
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Frame sent successfully:', data);
-            })
-            .catch(error => {
-                console.error('Error sending frame:', error);
-            });
-        }
-
-        // Frame capture controls
-        frameCaptureToggle.addEventListener('click', function() {
-            if (frameCapturing) {
-                stopFrameCapture();
-            } else {
-                if (!videoElement.srcObject) {
-                    alert('Please start the camera first!');
-                    return;
-                }
-                startFrameCapture();
-            }
-        });
-
-        captureIntervalSlider.addEventListener('input', function() {
-            captureInterval = parseInt(this.value);
-            intervalDisplay.textContent = captureInterval;
-            
-            // Restart capture with new interval if currently capturing
-            if (frameCapturing) {
-                stopFrameCapture();
-                startFrameCapture();
-            }
-        });
-
-        // Camera toggle button
-        cameraToggleBtn.addEventListener('click', function() {
-            const isRunning = this.textContent.includes('Stop');
-            if (isRunning) {
-                stopCamera();
-                this.innerHTML = '<i class="fa-solid fa-video"></i> Start Camera';
-                this.classList.remove('danger-button');
-                this.classList.add('primary-button');
-            } else {
-                startCamera();
-                this.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera';
-                this.classList.remove('primary-button');
-                this.classList.add('danger-button');
-            }
-        });
-
-        // Interactive functionality
-        document.querySelectorAll('.color-swatch').forEach(swatch => {
-            swatch.addEventListener('click', function() {
-                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-                this.classList.add('selected');
-            });
-        });
-
-        // Pen size slider
-        const penSlider = document.getElementById('pen-size');
-        penSlider.addEventListener('input', function() {
-            const value = (this.value / 10).toFixed(1);
-            this.nextElementSibling.textContent = value;
-        });
-
-        // Eraser size slider
-        const eraserSlider = document.getElementById('eraser-size');
-        eraserSlider.addEventListener('input', function() {
-            this.nextElementSibling.textContent = Math.round(this.value);
-        });
-
-        // Demo: Update gesture status
-        function updateGestureStatus(mode, icon, color, description) {
-            const dot = document.querySelector('.gesture-dot');
-            const iconEl = document.querySelector('.gesture-icon');
-            const label = document.querySelector('.gesture-label');
-            const desc = document.querySelector('.gesture-description');
-
-            dot.style.backgroundColor = color;
-            iconEl.innerHTML = icon;
-            label.textContent = mode;
-            label.style.color = color;
-            desc.textContent = description;
-        }
-
-        // Demo: Update face recognition status
-        function updateFaceStatus(recognized) {
-            const faceStatus = document.querySelector('.hand-status');
-            if (recognized) {
-                faceStatus.innerHTML = '<i class="fa-solid fa-face-smile"></i> Face recognised';
-                faceStatus.style.color = '#4ECDC4';
-            } else {
-                faceStatus.innerHTML = '<i class="fa-solid fa-face-meh"></i> Face not recognised';
-                faceStatus.style.color = '#9898b0';
-            }
-        }
-
-        // Demo: Update FPS
-        function updateFPS(fps) {
-            document.querySelector('.fps-label').textContent = `FPS: ${fps}`;
-        }
-
-        // Optional: Demo animation on load
-        setTimeout(() => {
-            updateGestureStatus('Drawing', '<i class="fa-solid fa-pencil"></i>', '#4ECDC4', 'Thumb + Index pinch — draw');
-            updateFaceStatus(true);
-            updateFPS(30);
-        }, 2000);
-
-        setTimeout(() => {
-            updateGestureStatus('Neutral', '<i class="fa-solid fa-hand-paper"></i>', '#6C757D', 'Open palm — no action');
-            updateFaceStatus(false);
-            updateFPS('--');
-        }, 5000);
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="app.js"></script>
 </body>
 </html>
