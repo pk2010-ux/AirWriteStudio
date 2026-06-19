@@ -163,23 +163,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ========== MEDIAPIPE HANDS ==========
+    // ========== BACKEND POLLING ==========
 
-    const hands = new Hands({locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-    }});
+    let isProcessing = false;
 
-    hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.5
-    });
+    async function sendFrameToBackend() {
+        if (!isCameraRunning || !videoElement.srcObject || isProcessing) return;
+        
+        isProcessing = true;
+        
+        // Draw video to hidden canvas
+        const captureCanvas = document.getElementById('capture-canvas');
+        captureCanvas.width = videoElement.videoWidth || 250;
+        captureCanvas.height = videoElement.videoHeight || 188;
+        const ctx = captureCanvas.getContext('2d');
+        ctx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
+        
+        const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
+        
+        try {
+            const response = await fetch('/api/process_frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ frame: frameData })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                processLandmarks(data);
+            }
+        } catch (err) {
+            console.error('Error hitting backend:', err);
+        } finally {
+            isProcessing = false;
+            // Loop
+            if (isCameraRunning) {
+                requestAnimationFrame(sendFrameToBackend);
+            }
+        }
+    }
 
     let fpsFrames = 0;
     let lastFpsTime = performance.now();
 
-    hands.onResults((results) => {
+    function processLandmarks(results) {
         fpsFrames++;
         let now = performance.now();
         if (now - lastFpsTime >= 1000) {
@@ -188,13 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
             lastFpsTime = now;
         }
 
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        if (results.hand_detected && results.landmarks) {
             updateHandStatus(true);
-            const landmarks = results.multiHandLandmarks[0];
+            const landmarks = results.landmarks;
             
             // Map coordinates to canvas (Mirrored horizontally)
-            // landmarks are 0..1
-            // Use index finger tip (8) for drawing location
             let indexTip = landmarks[8];
             let thumbTip = landmarks[4];
             let middleTip = landmarks[12];
@@ -206,10 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentPos = { x: cx, y: cy };
 
             // Gesture Math
-            // Distance between thumb and index
             let pinchDist = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2));
             
-            // Distance between middle/ring/pinky tips to wrist (to detect fist/eraser)
             let wrist = landmarks[0];
             let middleFold = Math.sqrt(Math.pow(middleTip.x - wrist.x, 2) + Math.pow(middleTip.y - wrist.y, 2));
             let ringFold = Math.sqrt(Math.pow(ringTip.x - wrist.x, 2) + Math.pow(ringTip.y - wrist.y, 2));
@@ -219,14 +242,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let isPinch = pinchDist < PINCH_THRESHOLD;
 
             if (isFist) {
-                // ERASER MODE
                 updateGestureStatus('Erasing', '<i class="fa-solid fa-eraser"></i>', '#E5484D', 'Closed fist — erase');
-                
-                // Use hand center for eraser
                 let ex = (1.0 - landmarks[9].x) * canvasElement.width;
                 let ey = landmarks[9].y * canvasElement.height;
                 
-                // Draw eraser cursor preview (temporarily directly on canvas context without saving to paths)
                 redrawCanvas();
                 canvasCtx.beginPath();
                 canvasCtx.arc(ex, ey, eraserSize, 0, Math.PI * 2);
@@ -238,9 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isDrawing = false;
                 currentPath = null;
             } else if (isPinch) {
-                // PEN MODE
                 updateGestureStatus('Drawing', '<i class="fa-solid fa-pencil"></i>', '#4ECDC4', 'Thumb + Index pinch — draw');
-                
                 if (!isDrawing) {
                     isDrawing = true;
                     currentPath = { color: currentColor, size: penSize, points: [currentPos] };
@@ -250,13 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     drawLine(canvasCtx, lastHandPosition, currentPos, currentColor, penSize);
                 }
             } else {
-                // NEUTRAL MODE
                 updateGestureStatus('Neutral', '<i class="fa-solid fa-hand-paper"></i>', '#6C757D', 'Open palm — no action');
                 isDrawing = false;
                 currentPath = null;
-                redrawCanvas(); // Clear any eraser cursor
+                redrawCanvas();
                 
-                // Draw small cursor preview
                 canvasCtx.beginPath();
                 canvasCtx.arc(cx, cy, 3, 0, Math.PI * 2);
                 canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -270,25 +285,16 @@ document.addEventListener('DOMContentLoaded', () => {
             isDrawing = false;
             currentPath = null;
         }
-    });
-
-    let camera = new Camera(videoElement, {
-        onFrame: async () => {
-            if (isCameraRunning) {
-                await hands.send({image: videoElement});
-            }
-        },
-        width: 1280,
-        height: 720
-    });
+    }
 
     // ========== CAMERA TOGGLE ==========
 
     cameraToggleBtn.addEventListener('click', async () => {
         if (isCameraRunning) {
-            // STOP
             isCameraRunning = false;
-            camera.stop();
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
             videoElement.style.display = 'none';
             cameraPlaceholder.style.display = 'flex';
             
@@ -296,18 +302,28 @@ document.addEventListener('DOMContentLoaded', () => {
             cameraToggleBtn.classList.remove('danger-button');
             cameraToggleBtn.classList.add('primary-button');
         } else {
-            // START
-            isCameraRunning = true;
-            cameraPlaceholder.style.display = 'none';
-            videoElement.style.display = 'block';
-            
-            cameraToggleBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Starting...';
-            
-            await camera.start();
-            
-            cameraToggleBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera';
-            cameraToggleBtn.classList.remove('primary-button');
-            cameraToggleBtn.classList.add('danger-button');
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                videoElement.srcObject = cameraStream;
+                await videoElement.play();
+                
+                isCameraRunning = true;
+                cameraPlaceholder.style.display = 'none';
+                videoElement.style.display = 'block';
+                
+                cameraToggleBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera';
+                cameraToggleBtn.classList.remove('primary-button');
+                cameraToggleBtn.classList.add('danger-button');
+                
+                // Start processing loop
+                sendFrameToBackend();
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Unable to access camera.');
+            }
         }
     });
 
