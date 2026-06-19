@@ -1,33 +1,42 @@
 import os
-import sys
 import base64
 import cv2
 import numpy as np
-from flask import Flask, request, jsonify
-
-# Add parent directory to path so we can import config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from flask import Flask, request, jsonify, send_from_directory
 
 import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import (
     HandLandmarker, HandLandmarkerOptions, RunningMode
 )
-from config import MP_MAX_NUM_HANDS, MP_MIN_DETECTION_CONFIDENCE, MP_MIN_TRACKING_CONFIDENCE
-from utils import get_resource_path
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.', static_url_path='')
 
-# Initialize HandLandmarker in IMAGE mode for serverless stateless execution
-MODEL_PATH = get_resource_path(os.path.join("assets", "hand_landmarker.task"))
+# ─── MediaPipe Hand Landmarker ────────────────────────────────────────────────
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "hand_landmarker.task")
+
 options = HandLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=MODEL_PATH),
     running_mode=RunningMode.IMAGE,
-    num_hands=MP_MAX_NUM_HANDS,
-    min_hand_detection_confidence=MP_MIN_DETECTION_CONFIDENCE,
-    min_hand_presence_confidence=MP_MIN_DETECTION_CONFIDENCE,
+    num_hands=1,
+    min_hand_detection_confidence=0.7,
+    min_hand_presence_confidence=0.7,
+    min_tracking_confidence=0.5,
 )
 landmarker = HandLandmarker.create_from_options(options)
+
+
+# ─── Routes ───────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def serve_index():
+    return send_from_directory('.', 'index.html')
+
+
+@app.route('/app.js')
+def serve_js():
+    return send_from_directory('.', 'app.js')
+
 
 @app.route('/api/process_frame', methods=['POST'])
 def process_frame():
@@ -36,7 +45,7 @@ def process_frame():
         if not data or 'frame' not in data:
             return jsonify({"error": "No frame provided"}), 400
 
-        # Extract base64 image data (data:image/png;base64,...)
+        # Extract base64 image data (data:image/jpeg;base64,...)
         frame_data = data['frame']
         if ',' in frame_data:
             frame_data = frame_data.split(',')[1]
@@ -63,7 +72,6 @@ def process_frame():
 
         if result.hand_landmarks and len(result.hand_landmarks) > 0:
             response["hand_detected"] = True
-            # Extract landmarks for the first hand
             landmarks = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in result.hand_landmarks[0]]
             response["landmarks"] = landmarks
 
@@ -72,5 +80,6 @@ def process_frame():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Expose the app object for Vercel
-# Vercel looks for the 'app' variable in api/index.py
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=7860)
