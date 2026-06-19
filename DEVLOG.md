@@ -36,12 +36,14 @@ AirWrite Studio is a hands-free digital canvas built with Python and PyQt6. It u
 - Added smart UI for tool selection and camera control.
 - Integrated offline voice command support architecture with Vosk assets.
 - Added documentation in `README.md` to describe features, installation, and usage.
+- Created a web-based demo version using Flask and Hugging Face Spaces Docker deployment. Note: The web demo relies on server-side processing for MediaPipe gestures and may experience latency or glitchiness depending on the user's hardware limitations, webcam quality, and network speed.
 
 ## Challenges
 
 - Ensuring reliable hand detection across different lighting conditions and webcams.
 - Mapping natural gestures into consistent canvas commands without accidental triggers.
 - Keeping performance smooth for real-time drawing and gesture recognition.
+- Handling network latency and server-side model processing for the web demo without native client-side binaries.
 
 ## Next Milestones
 
@@ -59,4 +61,4 @@ AirWrite Studio is a hands-free digital canvas built with Python and PyQt6. It u
 
 ---
 
-_Last updated: 2026-06-15_
+_Last updated: 2026-06-19_
