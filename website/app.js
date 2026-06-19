@@ -1,11 +1,11 @@
-// AirWrite Studio Web Demo Version - app.js
-// Handles UI interactions, MediaPipe Hands integration, and Canvas Drawing
+// AirWrite Studio Web Demo - app.js
+// All gesture detection runs on the Python backend via /api/process_frame
+// This file handles: UI, camera, canvas drawing, and rendering backend results.
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ========== MODAL LOGIC ==========
+    // ========== MODAL ==========
     const modal = document.getElementById('startup-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    closeModalBtn.addEventListener('click', () => {
+    document.getElementById('close-modal-btn').addEventListener('click', () => {
         modal.style.display = 'none';
     });
 
@@ -13,8 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoElement = document.getElementById('camera-feed');
     const cameraPlaceholder = document.getElementById('camera-placeholder');
     const cameraToggleBtn = document.getElementById('camera-toggle-btn');
-    
-    // Status UI
+
     const gestureDot = document.querySelector('.gesture-dot');
     const gestureIcon = document.querySelector('.gesture-icon');
     const gestureLabel = document.querySelector('.gesture-label');
@@ -22,51 +21,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const handStatus = document.querySelector('.hand-status');
     const fpsLabel = document.querySelector('.fps-label');
 
-    // Tools
     const colorSwatches = document.querySelectorAll('.color-swatch');
     const penSizeSlider = document.getElementById('pen-size');
     const eraserSizeSlider = document.getElementById('eraser-size');
-    const clearCanvasBtn = document.querySelector('.danger-button'); // Clear Canvas
+    const clearCanvasBtn = document.querySelector('.danger-button');
 
-    // Canvas
     const canvasElement = document.getElementById('drawing-canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const canvasPlaceholderUI = document.getElementById('canvas-placeholder');
 
-    // Resize canvas to fill area
+    // ========== CANVAS SETUP ==========
     function resizeCanvas() {
         const rect = canvasElement.parentElement.getBoundingClientRect();
+        // Save existing drawing
+        const imageData = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
         canvasElement.width = rect.width;
         canvasElement.height = rect.height;
+        canvasCtx.putImageData(imageData, 0, 0);
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // ========== APP STATE ==========
+    // ========== STATE ==========
     let isCameraRunning = false;
+    let cameraStream = null;
     let currentColor = '#FFFFFF';
     let penSize = 3.0;
     let eraserSize = 20.0;
-    
-    // Drawing state
-    let isDrawing = false;
-    let isErasing = false;
-    let paths = []; // Array of drawn paths { color, size, points: [{x,y}] }
-    let currentPath = null;
-    let lastHandPosition = null;
 
-    // Gestures
-    const PINCH_THRESHOLD = 0.08; 
-    const ERASE_THRESHOLD = 0.12;
+    // Drawing
+    let paths = [];       // { color, size, points: [{x,y}] }
+    let currentPath = null;
+    let isDrawing = false;
+    let lastActionPoint = null;
+    let currentGesture = 'neutral';
+
+    // Gesture display config (matches your Python config.py)
+    const GESTURE_INFO = {
+        neutral:  { label: 'Neutral',  icon: 'fa-solid fa-hand',     color: '#555555', desc: 'Open palm — no action' },
+        pen:      { label: 'Drawing',  icon: 'fa-solid fa-pencil',   color: '#0091FF', desc: 'Thumb + Index pinch — draw' },
+        eraser:   { label: 'Erasing',  icon: 'fa-solid fa-eraser',   color: '#E5484D', desc: 'Thumb out, fingers curled — erase' },
+        select:   { label: 'Select',   icon: 'fa-solid fa-arrow-pointer', color: '#AB6400', desc: 'Index finger point — select' },
+        drag:     { label: 'Dragging', icon: 'fa-solid fa-up-down-left-right', color: '#AB6400', desc: 'Three fingers — drag selected' },
+        zoom_in:  { label: 'Zoom In',  icon: 'fa-solid fa-magnifying-glass-plus', color: '#46A758', desc: 'Thumb + Middle — scale up' },
+        zoom_out: { label: 'Zoom Out', icon: 'fa-solid fa-magnifying-glass-minus', color: '#46A758', desc: 'Thumb + Ring — scale down' },
+    };
 
     // ========== UI HANDLERS ==========
-    
     colorSwatches.forEach(swatch => {
-        swatch.addEventListener('click', (e) => {
+        swatch.addEventListener('click', () => {
             colorSwatches.forEach(s => s.classList.remove('selected'));
             swatch.classList.add('selected');
             currentColor = swatch.style.backgroundColor || swatch.getAttribute('title');
-            // convert to hex or rgb string as is
         });
     });
 
@@ -82,56 +88,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clearCanvasBtn.addEventListener('click', () => {
         paths = [];
+        currentPath = null;
+        isDrawing = false;
         redrawCanvas();
     });
 
-    function updateGestureStatus(mode, icon, color, description) {
-        gestureDot.style.backgroundColor = color;
-        gestureIcon.innerHTML = icon;
-        gestureLabel.textContent = mode;
-        gestureLabel.style.color = color;
-        gestureDesc.textContent = description;
+    function updateGestureUI(gesture) {
+        const info = GESTURE_INFO[gesture] || GESTURE_INFO.neutral;
+        gestureDot.style.backgroundColor = info.color;
+        gestureIcon.innerHTML = `<i class="${info.icon}"></i>`;
+        gestureLabel.textContent = info.label;
+        gestureLabel.style.color = info.color;
+        gestureDesc.textContent = info.desc;
     }
 
-    function updateHandStatus(recognized) {
-        if (recognized) {
-            handStatus.innerHTML = '<i class="fa-solid fa-face-smile"></i> Face recognised'; // Re-using for hand status for consistency with UI mockup
+    function updateHandStatus(detected) {
+        if (detected) {
+            handStatus.innerHTML = '<i class="fa-solid fa-hand"></i> Hand detected';
             handStatus.style.color = '#4ECDC4';
         } else {
-            handStatus.innerHTML = '<i class="fa-solid fa-face-meh"></i> Face not recognised';
+            handStatus.innerHTML = '<i class="fa-solid fa-hand"></i> No hand detected';
             handStatus.style.color = '#9898b0';
         }
     }
 
-    // ========== DRAWING LOGIC ==========
-
-    function drawLine(ctx, p1, p2, color, size) {
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-    }
-
+    // ========== DRAWING ==========
     function redrawCanvas() {
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        // Hide placeholder if we have paths
-        if (paths.length > 0) {
-            canvasPlaceholderUI.style.display = 'none';
-        } else {
-            canvasPlaceholderUI.style.display = 'block';
-        }
+        canvasPlaceholderUI.style.display = paths.length > 0 ? 'none' : 'block';
 
         paths.forEach(path => {
             if (path.points.length < 2) return;
             canvasCtx.beginPath();
             canvasCtx.moveTo(path.points[0].x, path.points[0].y);
             for (let i = 1; i < path.points.length; i++) {
-                canvasCtx.lineTo(path.points[i].x, path.points[i].y);
+                // Use quadratic curves for smoothness
+                const prev = path.points[i - 1];
+                const curr = path.points[i];
+                const mx = (prev.x + curr.x) / 2;
+                const my = (prev.y + curr.y) / 2;
+                canvasCtx.quadraticCurveTo(prev.x, prev.y, mx, my);
             }
             canvasCtx.strokeStyle = path.color;
             canvasCtx.lineWidth = path.size;
@@ -142,165 +138,191 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function eraseAt(x, y, radius) {
-        // Simple spatial clearing: remove paths that have points near the eraser
-        let pathsChanged = false;
+        let changed = false;
         paths = paths.filter(path => {
-            let keepPath = true;
-            // Check if any point in path is within erase radius
-            for (let pt of path.points) {
-                let dx = pt.x - x;
-                let dy = pt.y - y;
-                if (Math.sqrt(dx*dx + dy*dy) < radius) {
-                    keepPath = false;
-                    pathsChanged = true;
-                    break;
+            for (const pt of path.points) {
+                if (Math.hypot(pt.x - x, pt.y - y) < radius) {
+                    changed = true;
+                    return false;
                 }
             }
-            return keepPath;
+            return true;
         });
-        if (pathsChanged) {
-            redrawCanvas();
-        }
+        if (changed) redrawCanvas();
     }
 
-    // ========== BACKEND POLLING ==========
-
+    // ========== BACKEND COMMUNICATION ==========
     let isProcessing = false;
+    let fpsFrames = 0;
+    let lastFpsTime = performance.now();
 
-    async function sendFrameToBackend() {
-        if (!isCameraRunning || !videoElement.srcObject || isProcessing) return;
-        
+    async function processLoop() {
+        if (!isCameraRunning || isProcessing) return;
         isProcessing = true;
-        
-        // Draw video to hidden canvas
+
+        // Capture frame
         const captureCanvas = document.getElementById('capture-canvas');
-        captureCanvas.width = videoElement.videoWidth || 250;
-        captureCanvas.height = videoElement.videoHeight || 188;
+        captureCanvas.width = videoElement.videoWidth || 320;
+        captureCanvas.height = videoElement.videoHeight || 240;
         const ctx = captureCanvas.getContext('2d');
         ctx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
-        
-        const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
-        
+        const frameData = captureCanvas.toDataURL('image/jpeg', 0.7);
+
         try {
-            const response = await fetch('/api/process_frame', {
+            const resp = await fetch('/api/process_frame', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ frame: frameData })
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                processLandmarks(data);
+
+            if (resp.ok) {
+                const data = await resp.json();
+                handleResult(data);
             }
         } catch (err) {
-            console.error('Error hitting backend:', err);
+            console.error('Backend error:', err);
         } finally {
             isProcessing = false;
-            // Loop
-            if (isCameraRunning) {
-                requestAnimationFrame(sendFrameToBackend);
-            }
+            if (isCameraRunning) requestAnimationFrame(processLoop);
         }
     }
 
-    let fpsFrames = 0;
-    let lastFpsTime = performance.now();
-
-    function processLandmarks(results) {
+    function handleResult(data) {
+        // FPS counter
         fpsFrames++;
-        let now = performance.now();
+        const now = performance.now();
         if (now - lastFpsTime >= 1000) {
             fpsLabel.textContent = `FPS: ${fpsFrames}`;
             fpsFrames = 0;
             lastFpsTime = now;
         }
 
-        if (results.hand_detected && results.landmarks) {
-            updateHandStatus(true);
-            const landmarks = results.landmarks;
-            
-            // Map coordinates to canvas (Mirrored horizontally)
-            let indexTip = landmarks[8];
-            let thumbTip = landmarks[4];
-            let middleTip = landmarks[12];
-            let ringTip = landmarks[16];
-            let pinkyTip = landmarks[20];
-
-            let cx = (1.0 - indexTip.x) * canvasElement.width;
-            let cy = indexTip.y * canvasElement.height;
-            let currentPos = { x: cx, y: cy };
-
-            // Gesture Math
-            let pinchDist = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2));
-            
-            let wrist = landmarks[0];
-            let middleFold = Math.sqrt(Math.pow(middleTip.x - wrist.x, 2) + Math.pow(middleTip.y - wrist.y, 2));
-            let ringFold = Math.sqrt(Math.pow(ringTip.x - wrist.x, 2) + Math.pow(ringTip.y - wrist.y, 2));
-            let pinkyFold = Math.sqrt(Math.pow(pinkyTip.x - wrist.x, 2) + Math.pow(pinkyTip.y - wrist.y, 2));
-
-            let isFist = (middleFold < ERASE_THRESHOLD && ringFold < ERASE_THRESHOLD && pinkyFold < ERASE_THRESHOLD);
-            let isPinch = pinchDist < PINCH_THRESHOLD;
-
-            if (isFist) {
-                updateGestureStatus('Erasing', '<i class="fa-solid fa-eraser"></i>', '#E5484D', 'Closed fist — erase');
-                let ex = (1.0 - landmarks[9].x) * canvasElement.width;
-                let ey = landmarks[9].y * canvasElement.height;
-                
-                redrawCanvas();
-                canvasCtx.beginPath();
-                canvasCtx.arc(ex, ey, eraserSize, 0, Math.PI * 2);
-                canvasCtx.fillStyle = 'rgba(229, 72, 77, 0.4)';
-                canvasCtx.fill();
-
-                eraseAt(ex, ey, eraserSize);
-
-                isDrawing = false;
-                currentPath = null;
-            } else if (isPinch) {
-                updateGestureStatus('Drawing', '<i class="fa-solid fa-pencil"></i>', '#4ECDC4', 'Thumb + Index pinch — draw');
-                if (!isDrawing) {
-                    isDrawing = true;
-                    currentPath = { color: currentColor, size: penSize, points: [currentPos] };
-                    paths.push(currentPath);
-                } else {
-                    currentPath.points.push(currentPos);
-                    drawLine(canvasCtx, lastHandPosition, currentPos, currentColor, penSize);
-                }
-            } else {
-                updateGestureStatus('Neutral', '<i class="fa-solid fa-hand-paper"></i>', '#6C757D', 'Open palm — no action');
-                isDrawing = false;
-                currentPath = null;
-                redrawCanvas();
-                
-                canvasCtx.beginPath();
-                canvasCtx.arc(cx, cy, 3, 0, Math.PI * 2);
-                canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                canvasCtx.fill();
-            }
-
-            lastHandPosition = currentPos;
-
-        } else {
+        if (!data.hand_detected) {
             updateHandStatus(false);
+            updateGestureUI('neutral');
             isDrawing = false;
             currentPath = null;
+            return;
         }
+
+        updateHandStatus(true);
+
+        const gesture = data.gesture || 'neutral';
+        const ap = data.action_point;
+        currentGesture = gesture;
+        updateGestureUI(gesture);
+
+        if (!ap) return;
+
+        // Convert normalized action_point (0..1) to canvas pixels (mirrored)
+        const cx = (1.0 - ap.x) * canvasElement.width;
+        const cy = ap.y * canvasElement.height;
+        const pos = { x: cx, y: cy };
+
+        // ─── Act on gesture ─────────────────────────────────────────
+        if (gesture === 'pen') {
+            canvasPlaceholderUI.style.display = 'none';
+            if (!isDrawing) {
+                isDrawing = true;
+                currentPath = { color: currentColor, size: penSize, points: [pos] };
+                paths.push(currentPath);
+            } else {
+                currentPath.points.push(pos);
+                // Incremental draw for responsiveness
+                if (lastActionPoint) {
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(lastActionPoint.x, lastActionPoint.y);
+                    canvasCtx.lineTo(pos.x, pos.y);
+                    canvasCtx.strokeStyle = currentColor;
+                    canvasCtx.lineWidth = penSize;
+                    canvasCtx.lineCap = 'round';
+                    canvasCtx.lineJoin = 'round';
+                    canvasCtx.stroke();
+                }
+            }
+        } else if (gesture === 'eraser') {
+            isDrawing = false;
+            currentPath = null;
+            eraseAt(cx, cy, eraserSize);
+            // Draw eraser cursor
+            redrawCanvas();
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, eraserSize, 0, Math.PI * 2);
+            canvasCtx.fillStyle = 'rgba(229, 72, 77, 0.3)';
+            canvasCtx.fill();
+            canvasCtx.strokeStyle = 'rgba(229, 72, 77, 0.6)';
+            canvasCtx.lineWidth = 1;
+            canvasCtx.stroke();
+        } else if (gesture === 'select') {
+            isDrawing = false;
+            currentPath = null;
+            // Draw select cursor
+            redrawCanvas();
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+            canvasCtx.fillStyle = 'rgba(171, 100, 0, 0.6)';
+            canvasCtx.fill();
+        } else if (gesture === 'drag') {
+            isDrawing = false;
+            currentPath = null;
+            // Draw drag indicator
+            redrawCanvas();
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, 8, 0, Math.PI * 2);
+            canvasCtx.fillStyle = 'rgba(171, 100, 0, 0.4)';
+            canvasCtx.fill();
+            canvasCtx.strokeStyle = 'rgba(171, 100, 0, 0.7)';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.stroke();
+        } else if (gesture === 'zoom_in' || gesture === 'zoom_out') {
+            isDrawing = false;
+            currentPath = null;
+            const zoomColor = 'rgba(70, 167, 88, 0.5)';
+            redrawCanvas();
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, 12, 0, Math.PI * 2);
+            canvasCtx.fillStyle = zoomColor;
+            canvasCtx.fill();
+            // Draw +/- icon
+            canvasCtx.strokeStyle = '#fff';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(cx - 6, cy);
+            canvasCtx.lineTo(cx + 6, cy);
+            canvasCtx.stroke();
+            if (gesture === 'zoom_in') {
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(cx, cy - 6);
+                canvasCtx.lineTo(cx, cy + 6);
+                canvasCtx.stroke();
+            }
+        } else {
+            // neutral
+            isDrawing = false;
+            currentPath = null;
+            redrawCanvas();
+            // Small cursor dot
+            canvasCtx.beginPath();
+            canvasCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+            canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            canvasCtx.fill();
+        }
+
+        lastActionPoint = pos;
     }
 
     // ========== CAMERA TOGGLE ==========
-
     cameraToggleBtn.addEventListener('click', async () => {
         if (isCameraRunning) {
             isCameraRunning = false;
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-            }
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
             videoElement.style.display = 'none';
             cameraPlaceholder.style.display = 'flex';
-            
             cameraToggleBtn.innerHTML = '<i class="fa-solid fa-video"></i> Start Camera';
             cameraToggleBtn.classList.remove('danger-button');
             cameraToggleBtn.classList.add('primary-button');
+            updateHandStatus(false);
+            updateGestureUI('neutral');
         } else {
             try {
                 cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -309,20 +331,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 videoElement.srcObject = cameraStream;
                 await videoElement.play();
-                
                 isCameraRunning = true;
                 cameraPlaceholder.style.display = 'none';
                 videoElement.style.display = 'block';
-                
                 cameraToggleBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera';
                 cameraToggleBtn.classList.remove('primary-button');
                 cameraToggleBtn.classList.add('danger-button');
-                
-                // Start processing loop
-                sendFrameToBackend();
+                processLoop();
             } catch (err) {
-                console.error('Error accessing camera:', err);
-                alert('Unable to access camera.');
+                console.error('Camera error:', err);
+                alert('Unable to access camera. Please check permissions.');
             }
         }
     });
