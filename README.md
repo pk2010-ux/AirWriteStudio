@@ -90,6 +90,14 @@ pip install pyinstaller
 
 This creates a bundled app in `dist\AirWriteStudio.exe`.
 
+## The Second Method
+
+Download the windows executable file directly from [Alpha Release(Stable)](https://github.com/pk2010-ux/AirWriteStudio/releases/tag/v1.0.0)
+
+## Demo
+
+Want to try the app before downloading it? Try it [here](https://huggingface.co/spaces/Priyajit0202/AWS-demo)
+
 ## 🎮 Usage
 
 Launch the application:
