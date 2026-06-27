@@ -1,6 +1,5 @@
-# AirWrite Studio - UI Module
-from .styles import Styles
-from .camera_widget import CameraWidget
-from .sidebar import Sidebar
-from .main_window import MainWindow
-from .toast_widget import ToastWidget
+"""AirWrite Studio UI package.
+
+Submodules are imported directly by the application. Avoid eager imports here so
+package initialization does not pull in the whole app dependency graph.
+"""

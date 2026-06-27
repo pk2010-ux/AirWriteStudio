@@ -8,6 +8,7 @@ Emits signals for camera frames, hand landmarks, detection status, and FPS.
 
 import os
 import time
+import logging
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -50,6 +51,7 @@ class HandTracker(QThread):
     landmarks_ready = pyqtSignal(object)
     hand_detected = pyqtSignal(bool)
     fps_updated = pyqtSignal(float)
+    error_occurred = pyqtSignal(str)
 
     def __init__(self, camera_index: int = CAMERA_INDEX, parent=None):
         super().__init__(parent)
@@ -67,37 +69,48 @@ class HandTracker(QThread):
     def run(self):
         """Main capture loop. Runs until stop() is called."""
         self._running = True
-
-        # Initialize HandLandmarker with VIDEO mode
-        options = HandLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=MODEL_PATH),
-            running_mode=RunningMode.VIDEO,
-            num_hands=MP_MAX_NUM_HANDS,
-            min_hand_detection_confidence=MP_MIN_DETECTION_CONFIDENCE,
-            min_hand_presence_confidence=MP_MIN_DETECTION_CONFIDENCE,
-            min_tracking_confidence=MP_MIN_TRACKING_CONFIDENCE,
-        )
-        landmarker = HandLandmarker.create_from_options(options)
-
-        # Open camera
-        cap = cv2.VideoCapture(self._camera_index)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-
-        if not cap.isOpened():
-            self._running = False
-            return
-
-        # FPS tracking
-        frame_count = 0
-        fps_start_time = time.time()
-        last_hand_detected = False
-        timestamp_ms = 0
+        cap = None
+        landmarker = None
 
         try:
+            if not os.path.exists(MODEL_PATH):
+                raise FileNotFoundError(f"MediaPipe model not found: {MODEL_PATH}")
+
+            logging.info("Starting hand tracker with model: %s", MODEL_PATH)
+
+            # Initialize HandLandmarker with VIDEO mode
+            options = HandLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=MODEL_PATH),
+                running_mode=RunningMode.VIDEO,
+                num_hands=MP_MAX_NUM_HANDS,
+                min_hand_detection_confidence=MP_MIN_DETECTION_CONFIDENCE,
+                min_hand_presence_confidence=MP_MIN_DETECTION_CONFIDENCE,
+                min_tracking_confidence=MP_MIN_TRACKING_CONFIDENCE,
+            )
+            landmarker = HandLandmarker.create_from_options(options)
+
+            # Open camera. CAP_DSHOW avoids some Windows Media Foundation crashes
+            # and long startup delays in frozen OpenCV applications.
+            cap = cv2.VideoCapture(self._camera_index, cv2.CAP_DSHOW)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+
+            if not cap.isOpened():
+                raise RuntimeError(
+                    f"Could not open camera index {self._camera_index}. "
+                    "Close other camera apps and check Windows camera permissions."
+                )
+
+            # FPS tracking
+            frame_count = 0
+            fps_start_time = time.time()
+            last_hand_detected = False
+            timestamp_ms = 0
+
             while self._running:
                 ret, frame = cap.read()
                 if not ret:
+                    time.sleep(0.01)
                     continue
 
                 # Mirror the frame for natural interaction
@@ -150,10 +163,16 @@ class HandTracker(QThread):
                     frame_count = 0
                     fps_start_time = time.time()
 
+        except Exception as exc:
+            logging.exception("Hand tracker failed")
+            self.error_occurred.emit(str(exc))
         finally:
             # Clean up resources
-            cap.release()
-            landmarker.close()
+            self._running = False
+            if cap is not None:
+                cap.release()
+            if landmarker is not None:
+                landmarker.close()
 
     def stop(self):
         """Signal the thread to stop and wait for it to finish."""

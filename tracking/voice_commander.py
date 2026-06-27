@@ -25,7 +25,9 @@ try:
     import vosk          # type: ignore[import-untyped]
     import sounddevice as sd
     _VOSK_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
+    vosk = None
+    sd = None
     _VOSK_AVAILABLE = False
 
 

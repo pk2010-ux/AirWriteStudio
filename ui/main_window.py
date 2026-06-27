@@ -117,6 +117,7 @@ class MainWindow(QMainWindow):
         # Status signals
         self.hand_tracker.hand_detected.connect(self.sidebar.update_hand_status)
         self.hand_tracker.fps_updated.connect(self.sidebar.update_fps)
+        self.hand_tracker.error_occurred.connect(self._on_tracker_error)
 
     def _connect_sidebar_signals(self):
         """Connect Sidebar control signals to canvas/engine."""
@@ -563,6 +564,8 @@ class MainWindow(QMainWindow):
     def _toggle_camera(self, start: bool):
         """Start or stop the camera/hand tracker."""
         if start:
+            if self.hand_tracker.isRunning():
+                return
             self.hand_tracker.start()
             self._camera_active = True
         else:
@@ -571,6 +574,14 @@ class MainWindow(QMainWindow):
             self._end_active_operations()
             self.canvas_widget.set_cursor(None, GestureMode.NEUTRAL)
             self.sidebar.update_gesture_status(GestureMode.NEUTRAL)
+
+    def _on_tracker_error(self, message: str):
+        """Show camera startup/runtime errors instead of silently failing."""
+        self._camera_active = False
+        self.sidebar.set_camera_running(False)
+        self.sidebar.update_hand_status(False)
+        self._show_toast(f"Camera error: {message}")
+        QMessageBox.warning(self, "Camera Error", message)
 
     def _toggle_fullscreen(self):
         """Toggle fullscreen mode."""

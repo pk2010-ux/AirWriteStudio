@@ -477,6 +477,20 @@ class Sidebar(QWidget):
         """Get the camera preview widget for connecting to HandTracker."""
         return self._camera_widget
 
+    def set_camera_running(self, running: bool):
+        """Synchronize the camera toggle button with the actual tracker state."""
+        self._camera_running = running
+        if self._camera_running:
+            self._camera_toggle.setText("Stop Camera")
+            self._camera_toggle.setIcon(self._icon('fa5s.stop', '#E5484D'))
+            self._camera_toggle.setObjectName("danger_button")
+        else:
+            self._camera_toggle.setText("Start Camera")
+            self._camera_toggle.setIcon(self._icon('fa5s.video'))
+            self._camera_toggle.setObjectName("primary_button")
+        self._camera_toggle.style().unpolish(self._camera_toggle)
+        self._camera_toggle.style().polish(self._camera_toggle)
+
     def update_gesture_status(self, mode: GestureMode):
         """Update the gesture status display."""
         info = GESTURE_MODE_INFO.get(mode, GESTURE_MODE_INFO[GestureMode.NEUTRAL])
@@ -547,16 +561,7 @@ class Sidebar(QWidget):
 
     def _on_camera_toggle(self):
         self._camera_running = not self._camera_running
-        if self._camera_running:
-            self._camera_toggle.setText("Stop Camera")
-            self._camera_toggle.setIcon(self._icon('fa5s.stop', '#E5484D'))
-            self._camera_toggle.setObjectName("danger_button")
-        else:
-            self._camera_toggle.setText("Start Camera")
-            self._camera_toggle.setIcon(self._icon('fa5s.video'))
-            self._camera_toggle.setObjectName("primary_button")
-        self._camera_toggle.style().unpolish(self._camera_toggle)
-        self._camera_toggle.style().polish(self._camera_toggle)
+        self.set_camera_running(self._camera_running)
         self.camera_toggled.emit(self._camera_running)
 
     def _on_laser_toggle(self):

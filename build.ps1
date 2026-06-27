@@ -3,9 +3,29 @@
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $assetData = "assets;assets"
-$voskData = "venv\Lib\site-packages\vosk;vosk"
 $exeName = "AirWriteStudio"
 
 Write-Host "Building $exeName..."
-py -3 -m PyInstaller --windowed --onefile --name $exeName --add-data $assetData --add-data $voskData "$projectRoot\main.py"
+
+$args = @(
+    "-3", "-m", "PyInstaller",
+    "--noconfirm",
+    "--clean",
+    "--windowed",
+    "--onefile",
+    "--name", $exeName,
+    "--add-data", $assetData,
+    "--collect-data", "mediapipe",
+    "--collect-binaries", "mediapipe",
+    "--collect-data", "vosk",
+    "--collect-binaries", "vosk",
+    "--hidden-import", "mediapipe.tasks.python",
+    "--hidden-import", "mediapipe.tasks.python.vision",
+    "--hidden-import", "mediapipe.tasks.python.vision.hand_landmarker",
+    "--hidden-import", "mediapipe.tasks.python.vision.core.vision_task_running_mode",
+    "$projectRoot\main.py"
+)
+
+py @args
 Write-Host "Build finished. Check the dist folder."
+Write-Host "If camera startup fails, check: $env:LOCALAPPDATA\AirWrite Studio\airwrite.log"

@@ -39,6 +39,7 @@ Keyboard Shortcuts:
 
 import os
 import sys
+import logging
 
 # Suppress noisy MediaPipe telemetry and TensorFlow Lite warnings
 os.environ["GLOG_minloglevel"] = "2"          # Suppress INFO/WARNING from glog
@@ -49,12 +50,16 @@ os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"      # Force CPU (avoids GPU init warn
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QSurfaceFormat
+from app_logging import setup_logging
 from ui.main_window import MainWindow
 from ui.styles import Styles
 
 
 def main():
     """Initialize and run the AirWrite Studio application."""
+    log_file = setup_logging()
+    logging.info("Log file: %s", log_file)
+
     # Enable 4x MSAA for QOpenGLWidget to fix pixelated strokes
     fmt = QSurfaceFormat()
     fmt.setSamples(4)
