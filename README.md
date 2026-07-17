@@ -33,24 +33,30 @@ If you want the real, non-laggy experience, it is a few terminal commands away, 
 - Open palm, fingers spread: does nothing on purpose, this is your safe "stop listening to me" pose
 Fair warning, it takes a minute to get your muscle memory right. I definitely erased a whole diagram by accident more than once while learning my own gestures.
  
-**Drawing tools**
-- Pen with a 12-color palette and adjustable stroke size
-- Laser pointer mode, strokes fade out after about two and a half seconds, good for presentations where you dont actually want to leave a mark
-- Highlighter with a semi-transparent overlay, comes in 4 preset colors
-- Pressure-sensitive width that changes based on how fast youre moving your hand, slower feels like pressing harder
-- Galaxy brush for a decorative particle-style stroke, mostly because I thought it looked cool, no deeper reason
-**Smart canvas stuff**
-- Shape recognition that snaps your wobbly freehand circles, rectangles, triangles, and lines into clean geometry, so nobody has to know you cant actually draw a straight line
-- OCR text conversion, select handwritten strokes and turn them into editable text through Tesseract
-- Grid templates: lined, graph, dot grid, music staff, and Cornell notes, for anyone taking actual notes instead of just doodling
-**Advanced bits**
-- Offline voice commands through Vosk, you can say things like "undo", "clear", or "color red" and it listens locally, nothing gets sent anywhere
-- A gesture calibration wizard, because hand sizes are not one-size-fits-all and the default thresholds wont suit everyone
-- Undo/redo history, up to 50 steps back
-- Export to PNG, PDF, or SVG
-- Save and load your workspace in a native `.air` file format
-**The UI**
-Minimal dark interface, inspired by Linear, Apple, and Notion, because I couldnt decide which one to copy so I just borrowed a bit from each. Clean typography using Inter, a restrained color palette, and a consistent 8px spacing grid throughout.
+Drawing tools
+
+Pen, 12 colors, adjustable size
+Laser pointer, fades after ~2.5s, good for presentations
+Highlighter, semi-transparent, 4 preset colors
+Pressure-sensitive width based on hand speed
+Galaxy brush, just because it looked cool
+
+Smart canvas stuff
+
+Shape recognition, snaps wobbly circles/rectangles/triangles/lines into clean geometry
+OCR, turns handwritten strokes into editable text via Tesseract
+Grid templates: lined, graph, dot grid, music staff, Cornell notes
+
+Advanced bits
+
+Offline voice commands via Vosk, "undo", "clear", "color red", nothing leaves your machine
+Gesture calibration wizard for different hand sizes
+50-step undo/redo history
+Export to PNG, PDF, or SVG
+Save/load workspace as native .air files
+
+The UI
+Dark, minimal, inspired by Linear, Apple, and Notion. Inter font, restrained colors, consistent 8px spacing
  
 ## Running it locally
  
