@@ -2,7 +2,8 @@
  
 A hands-free digital canvas that lets you draw, erase, and annotate using nothing but your hand in front of a webcam, no mouse, no stylus, no touching anything
  
-*(a screenshot or short gif of the canvas in action goes right here, I still havent recorded one but it is next on my list before this goes anywhere near judges)*
+![Image](/image.png)
+
  
 **AirWrite Studio** is a real-time, camera-based drawing app. Point a normal webcam at your hand, pinch your fingers together, and start drawing in mid-air like some kind of wizard who also happens to know Python. It uses MediaPipe to track your hand and turns specific finger positions into canvas actions. The first time it actually worked for me I got way too excited and startled my own cat off the desk.
  
