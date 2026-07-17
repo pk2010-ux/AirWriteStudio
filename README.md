@@ -33,29 +33,23 @@ If you want the real, non-laggy experience, it is a few terminal commands away, 
 - Open palm, fingers spread: does nothing on purpose, this is your safe "stop listening to me" pose
 Fair warning, it takes a minute to get your muscle memory right. I definitely erased a whole diagram by accident more than once while learning my own gestures.
  
-Drawing tools
-
-Pen, 12 colors, adjustable size
-Laser pointer, fades after ~2.5s, good for presentations
-Highlighter, semi-transparent, 4 preset colors
-Pressure-sensitive width based on hand speed
-Galaxy brush, just because it looked cool
-
-Smart canvas stuff
-
-Shape recognition, snaps wobbly circles/rectangles/triangles/lines into clean geometry
-OCR, turns handwritten strokes into editable text via Tesseract
-Grid templates: lined, graph, dot grid, music staff, Cornell notes
-
-Advanced bits
-
-Offline voice commands via Vosk, "undo", "clear", "color red", nothing leaves your machine
-Gesture calibration wizard for different hand sizes
-50-step undo/redo history
-Export to PNG, PDF, or SVG
-Save/load workspace as native .air files
-
-The UI
+**Drawing tools**
+- Pen, 12 colors, adjustable size
+- Laser pointer, fades after ~2.5s, good for presentations
+- Highlighter, semi-transparent, 4 preset colors
+- Pressure-sensitive width based on hand speed
+- Galaxy brush, just because it looked cool
+**Smart canvas stuff**
+- Shape recognition, snaps wobbly circles/rectangles/triangles/lines into clean geometry
+- OCR, turns handwritten strokes into editable text via Tesseract
+- Grid templates: lined, graph, dot grid, music staff, Cornell notes
+**Advanced bits**
+- Offline voice commands via Vosk, "undo", "clear", "color red", nothing leaves your machine
+- Gesture calibration wizard for different hand sizes
+- 50-step undo/redo history
+- Export to PNG, PDF, or SVG
+- Save/load workspace as native `.air` files
+**The UI**
 Dark, minimal, inspired by Linear, Apple, and Notion. Inter font, restrained colors, consistent 8px spacing
  
 ## Running it locally
