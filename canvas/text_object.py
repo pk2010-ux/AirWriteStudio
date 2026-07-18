@@ -17,6 +17,7 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPen,
 )
+from config import SYSTEM_UI_FONT
 
 
 # ─── Text Block ──────────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ class TextBlock:
         position: QPointF,
         font_size: float = 16.0,
         color: QColor | None = None,
-        font_family: str = "Segoe UI",
+        font_family: str = SYSTEM_UI_FONT,
     ) -> None:
         self.text: str = text
         self.position: QPointF = QPointF(position)

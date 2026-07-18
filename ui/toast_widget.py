@@ -25,6 +25,7 @@ from PyQt6.QtGui import (
     QPen,
 )
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect, QWidget
+from config import SYSTEM_UI_FONT
 
 
 # ─── Constants ───────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ class ToastWidget(QWidget):
         self._msg_font = QFont('Inter', _FONT_SIZE)
         self._msg_font.setWeight(QFont.Weight.Medium)
 
-        self._icon_font = QFont('Segoe UI', _FONT_SIZE)
+        self._icon_font = QFont(SYSTEM_UI_FONT, _FONT_SIZE)
         self._icon_font.setWeight(QFont.Weight.Medium)
 
         shadow = QGraphicsDropShadowEffect(self)

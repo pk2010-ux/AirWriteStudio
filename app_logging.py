@@ -14,7 +14,22 @@ import sys
 from pathlib import Path
 
 
-APP_LOG_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AirWrite Studio"
+def _get_app_data_dir() -> Path:
+    """Return the platform-appropriate application data directory."""
+    import platform
+    system = platform.system()
+    if system == "Windows":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AirWrite Studio"
+    elif system == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "AirWrite Studio"
+    else:
+        # Linux / other Unix — respect XDG_DATA_HOME
+        xdg = os.environ.get("XDG_DATA_HOME", "")
+        base = Path(xdg) if xdg else Path.home() / ".local" / "share"
+        return base / "AirWrite Studio"
+
+
+APP_LOG_DIR = _get_app_data_dir()
 APP_LOG_FILE = APP_LOG_DIR / "airwrite.log"
 _CRASH_FILE = None
 

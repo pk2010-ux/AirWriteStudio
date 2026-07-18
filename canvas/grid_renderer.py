@@ -11,6 +11,7 @@ from enum import Enum
 
 from PyQt6.QtCore import Qt, QPointF, QRectF
 from PyQt6.QtGui import QColor, QFont, QPainter, QPen
+from config import SYSTEM_UI_FONT
 
 
 # ─── Grid Type Enum ───────────────────────────────────────────────────────────
@@ -244,7 +245,7 @@ class GridRenderer:
         painter.drawLine(QPointF(0.0, summary_y), QPointF(float(width), summary_y))
 
         # Subtle zone labels
-        label_font = QFont("Segoe UI", max(8, int(9 * zoom)))
+        label_font = QFont(SYSTEM_UI_FONT, max(8, int(9 * zoom)))
         label_font.setItalic(True)
         painter.setFont(label_font)
         painter.setPen(self._CORNELL_LABEL_COLOR)

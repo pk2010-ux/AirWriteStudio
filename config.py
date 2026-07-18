@@ -6,6 +6,32 @@ camera settings, canvas defaults, and UI constants.
 """
 
 from enum import Enum
+import platform as _platform
+
+# ─── Platform-Aware Font Defaults ────────────────────────────────────────────
+
+def _system_ui_font() -> str:
+    """Return the best system UI font for the current platform."""
+    system = _platform.system()
+    if system == "Darwin":
+        return ".AppleSystemUIFont"
+    elif system == "Windows":
+        return "Segoe UI"
+    else:
+        return "sans-serif"
+
+def _system_emoji_font() -> str:
+    """Return the best emoji font for the current platform."""
+    system = _platform.system()
+    if system == "Darwin":
+        return "Apple Color Emoji"
+    elif system == "Windows":
+        return "Segoe UI Emoji"
+    else:
+        return "Noto Color Emoji"
+
+SYSTEM_UI_FONT = _system_ui_font()
+SYSTEM_EMOJI_FONT = _system_emoji_font()
 
 
 # ─── Gesture Modes ───────────────────────────────────────────────────────────

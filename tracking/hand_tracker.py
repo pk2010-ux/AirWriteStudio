@@ -91,7 +91,12 @@ class HandTracker(QThread):
 
             # Open camera. CAP_DSHOW avoids some Windows Media Foundation crashes
             # and long startup delays in frozen OpenCV applications.
-            cap = cv2.VideoCapture(self._camera_index, cv2.CAP_DSHOW)
+            # On Linux/macOS, use the default backend (V4L2 / AVFoundation).
+            import platform
+            if platform.system() == "Windows":
+                cap = cv2.VideoCapture(self._camera_index, cv2.CAP_DSHOW)
+            else:
+                cap = cv2.VideoCapture(self._camera_index)
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
 
