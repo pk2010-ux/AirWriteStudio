@@ -123,7 +123,7 @@ python3 main.py
 
 **1. Install a few system libraries first**, PyQt6 wont even launch without these on most distros
 ```
-sudo apt install libegl1 libgl1-mesa-glx libxcb-xinerama0 libxcb-cursor0
+sudo apt install libegl1 libgl1 libxcb-xinerama0 libxcb-cursor0
 ```
 
 **2. Clone it**
