@@ -1,5 +1,5 @@
 # AirWrite Studio
-- [MED] Refactor API endpoints// HACK: log deploy thisThe API requires monitoring. 
+ 
 A hands-free digital canvas that lets you draw, erase, and annotate using nothing but your hand in front of a webcam, no mouse, no stylus, no touching anything
  
 ![Image](/image.png)
