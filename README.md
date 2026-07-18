@@ -103,32 +103,36 @@ If you want to build that executable yourself instead of trusting a random .exe 
 pip install pyinstaller
 .\build.ps1
 ```
-This spits out a bundled app at `dist\AirWriteStudio.exe`.
- 
-## Keyboard shortcuts
- 
-- `Ctrl+Z` — Undo
-- `Ctrl+Y` — Redo
-- `Ctrl+S` — Save as PNG
-- `Ctrl+E` — Export as PDF
-- `Ctrl+N` — Clear canvas
-- `F11` — Toggle fullscreen
-- `Home` — Reset zoom/pan view
-## How it works
- 
-The gesture detection isnt just "is your thumb near your index finger, yes/no." Every distance between fingertips gets normalized against your palm size first, so it works whether youre a foot away from the camera or right up close, and whether your hands are big or small. On top of that there's hysteresis on every threshold (basically two different trigger points for turning a gesture on versus off) plus frame-by-frame debouncing before a gesture is accepted as "real". I added all of that after the early version kept flickering between pen and neutral mode if my hand so much as twitched, which made drawing a straight line feel like trying to write during an earthquake.
- 
-The undo/redo system in `canvas_engine.py` caps out at 50 steps, past that it starts dropping the oldest actions rather than eating memory forever. Laser pointer strokes are the one exception, they arent pushed onto the undo stack at all since they're meant to fade and disappear anyway.
- 
-Both OCR and voice commands are wrapped in try/except import guards, so if Tesseract isnt installed on your system, or your mic setup is broken, the app still launches fine, it just quietly turns those specific features off instead of crashing on startup. I didnt want one missing dependency to take down the entire app.
-## Contributing
- 
-Contributions, issues, and feature requests are welcome, check the [issues page](https://github.com/pk2010-ux/AirWriteStudio/issues).
- 
-## Guide used
- 
-[Writing a README that doesn't suck](https://stardance.hackclub.com/resources/great_readme) — used this to structure this exact file, if this README is actually decent, credit goes there
- 
-## License
- 
-This project is Licensed under MIT.
+
+This creates a bundled app in `dist\AirWriteStudio.exe`.
+
+## 🎮 Usage
+
+Launch the application:
+
+```bash
+python main.py
+```
+
+1.  Click **Start Camera** in the sidebar.
+2.  Hold your hand up to the camera.
+3.  Use the gestures listed above (e.g., pinch to draw) to interact with the canvas.
+4.  Use the sidebar to change tools, colors, toggle smart shapes, or export your work.
+
+### Keyboard Shortcuts
+*   `Ctrl+Z`: Undo
+*   `Ctrl+Y`: Redo
+*   `Ctrl+S`: Save as PNG
+*   `Ctrl+E`: Export as PDF
+*   `Ctrl+N`: Clear canvas
+*   `F11`: Toggle fullscreen
+*   `Home`: Reset zoom/pan view
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+Feel free to check [issues page](https://github.com/pk2010-ux/AirWriteStudio/issues).
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
